@@ -1,0 +1,92 @@
+//-----------------------------------------------------------------------------
+// TP4_Main.c
+//-----------------------------------------------------------------------------
+// AUTH: FAUT OLLIER
+// DATE: 
+//
+// Target: C8051F02x
+// Tool chain: KEIL Microvision 4
+//
+//-----------------------------------------------------------------------------
+#include <C8051F020.h>
+#include "c8051F020_SFR16.h"
+#include "TP4_Lib_Config_Globale_8051F020.h"
+#include "TP4_Lib_Divers.h"
+
+int i = 0;
+
+// Prototypes de Fonctions
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+// MAIN Routine
+//-----------------------------------------------------------------------------
+void main (void) {
+       
+	  Init_Device();  // Appel des configurations globales
+	  
+// Début Insertion Code Configuration des périphériques ***********************
+ 
+//-----------------------------------------------------------------------------
+// Réglage du UART0
+//-----------------------------------------------------------------------------
+	SCON0 |= 0x40; //x1xx.xxxx on se met en mode 1
+	SCON0 &= 0x7F; //0xxx.xxxx on se met en mode 1
+	PCON |= 0x80; //1xxx.xxxxPCON.7 = 1 on ne divise pas par 2
+	PCON &= 0xBF; //x0xx.xxxx PCON.6 = 0 on choisi le mode du uart0
+	SCON0 |= 0x20; //xx1x.xxxx SCON0.5 = 1 activation du byte stop
+	SCON0 |= 0x10; //xxx1.xxxx SCON0.4 = 1 activation de la reception
+	
+	//mise en oeuvre d_un timer pour fournir une clock de 16x115200 bauds (x12 = 22.1184MHZ)
+	T2CON |= 0x04; //xxxx.x1xx le byte 2 de T2CON enables Timer2.
+	T2CON &= 0xFE; //1111.1110 => xxxx.xxx0 on clear le byte 0 pour choisir mode auto_reload
+  RCAP2L = 0xFA; 
+	RCAP2H = 0xFF; 
+	T2CON &= 0xFD; //T2CON.1(=CT2) a 0 pour diviser par 2 sysclock
+	EA = 1; //pour déclencher une interruption, il faut d_abord les autoriser
+	IE |= 0x20; //IE.5=1 on autorise l_interruption 5
+	T2CON |= 0x10; //T2CON.4=1 on attribue a uart0 la clock voulue pour la transmission
+	T2CON |= 0x20; //T2CON.5=1 on attribue a uart0 la clock voulue pour la reception
+	
+// Fin Code Initialisations ***************************************************
+
+	
+// Début Insertion Code Phase Démarrage ***************************************	
+   
+//	 while (i<5) {
+//		 //methode par scrutation
+//	   if (TI0==1) { //TI0 (= SCON0.1) == 1 ? drapeau allumé?
+//				SBUF0 = 0x4A; //lettre J = 4A en hexa
+//			  TI0=0; //on remet a zero le flag
+//			  i+=1;
+//     } 	 
+//	 }
+	
+// Fin Code phase Démarrage	***************************************************
+	
+	
+	while(1)
+		 
+        {   SBUF0 = 0x4A; //lettre J = 4A en hexa
+					  while  (TI0==0);  //TI0 (= SCON0.1) == 1 ? drapeau allumé?
+				     Software_Delay(1);
+			  TI0=0; //on remet a zero le flag
+        }				               	
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+// Fonctions de configuration des divers périphériques
+//-----------------------------------------------------------------------------
+// Insérez vos fonctions de configuration ici
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+// Fonctions d'interruptions
+//-----------------------------------------------------------------------------
+// Insérez vos fonctions d'interruption ici
+
+void INT5() interrupt 5
+{
+  T2CON &= 0x7F; //0111.1111 => 0xxx.xxxx on remet le flag a 0 (byte 7 de T2CON) 
+}
